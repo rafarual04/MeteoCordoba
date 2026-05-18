@@ -47,6 +47,7 @@ https://youtu.be/bt4_CgTHPGs
 
 ## Usuario de prueba
 Usuario: admin
+
 Contraseña: admin
 
 Este usuario te dará privilegios de admin (panel adminitrativo de Djando y el CRUD de los registros). Si quieres uno normal, puedes probar a *registrarte*.
