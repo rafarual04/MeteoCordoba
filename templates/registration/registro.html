@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}Registro - MeteoCórdoba{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center align-items-center" style="min-height: 70vh;">
+    <div class="col-md-5 col-lg-4">
+        
+        <div class="card card-agro border-0 shadow p-4">
+            <div class="text-center mb-2">
+                <i class="bi bi-cloud-sun-fill text-secondary display-5"></i>
+                <h3 class="fw-bold text-dark mt-2 mb-1">Crear cuenta</h3>
+                <p class="text-muted small">Regístrate para acceder al ecosistema de MeteoCórdoba</p>
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} small p-2 text-center shadow-sm" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill"></i> {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                {% for field in form %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary small">
+                            {% if field.label == "Username" %}Nombre de usuario
+                            {% elif field.label == "Password" %}Contraseña
+                            {% elif field.label == "Password confirmation" %}Confirma la contraseña
+                            {% else %}{{ field.label }}{% endif %}
+                        </label>
+                        <div class="shadow-sm">
+                            {{ field }}
+                        </div>
+                        {# Se elimina 'field.help_text' para que no muestre las instrucciones en inglés #}
+                    </div>
+                {% endfor %}
+
+                <button type="submit" class="btn btn-agro-principal w-100 py-2 fw-bold shadow-sm mt-3">
+                    <i class="bi bi-check-circle me-1"></i> Registrarse
+                </button>
+            </form>
+            
+            <div class="text-center mt-3">
+                <a href="{% url 'login' %}" class="small text-decoration-none" style="color: var(--azul-oscuro);">¿Ya tienes cuenta? Inicia sesión</a>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    // Este script inyecta la clase CSS de Bootstrap a los inputs crudos generados por Django
+    document.querySelectorAll('input').forEach(function(input) {
+        if(input.type !== 'submit') {
+            input.classList.add('form-control');
+        }
+    });
+</script>
+{% endblock %}

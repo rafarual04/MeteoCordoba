@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+
+{% block title %}Alertas - MeteoCordoba{% endblock %}
+
+{% block content %}
+<div class="card card-agro p-4 mb-4" style="overflow: visible;">
+    <div class="row align-items-center">
+        <div class="col-md-7">
+            <h2 class="fw-bold mb-1" style="color: var(--azul-oscuro);">Gestión de alertas</h2>
+            <p class="text-muted mb-0">Protocolos de diagnóstico y actuación inmediata</p>
+        </div>
+        <div class="col-md-5 text-md-end mt-3 mt-md-0">
+            <label class="fw-bold me-2 text-secondary">Visualizar:</label>
+            <select class="form-select d-inline-block w-auto shadow-sm" id="selectorEscala" onchange="location.href='?tipo='+this.value">
+                <option value="diario" {% if tipo_vista == 'diario' %}selected{% endif %}>Resumen por días</option>
+                <option value="horario" {% if tipo_vista == 'horario' %}selected{% endif %}>Detalle por horas</option>
+            </select>
+        </div>
+    </div>
+</div>
+    </div>
+</div>
+
+<div class="row row-cols-1 row-cols-md-3 row-cols-lg-5 g-3 mb-4">
+    {% for r in registros %}
+    <div class="col">
+        <div class="card card-agro h-100 border-0 shadow-sm overflow-hidden d-flex flex-column">
+            <div style="height: 5px; background-color: {% if r.alerta_sequedad_relativa %}#dc3545{% elif r.alerta_bateria_baja or r.alerta_panel_bajo %}#ffc107{% else %}#0dcaf0{% endif %};"></div>
+            
+            <div class="card-body p-3 d-flex flex-column">
+                <div class="mb-3 text-center border-bottom pb-2">
+                    <span class="text-dark fw-bold d-block">{{ r.fecha|date:"d/m/Y" }}</span>
+                    {% if tipo_vista == 'horario' %}
+                        <span class="badge bg-light text-muted border">{{ r.fecha|date:"H:i" }}h</span>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3 d-flex flex-wrap gap-1 justify-content-center">
+                    {% if r.alerta_sequedad_relativa %}<span class="badge bg-danger-soft text-danger border border-danger small">Sequedad</span>{% endif %}
+                    {% if r.alerta_bateria_baja %}<span class="badge bg-warning-soft text-dark border border-warning small">Batería</span>{% endif %}
+                    {% if r.alerta_panel_bajo %}<span class="badge bg-secondary-soft text-dark border border-secondary small">Panel</span>{% endif %}
+                    {% if r.alerta_subida_brusca %}<span class="badge bg-info-soft text-dark border border-info small">S. Humedad</span>{% endif %}
+                    {% if r.alerta_caida_brusca %}<span class="badge bg-primary-soft text-primary border border-primary small">C. Humedad</span>{% endif %}
+                    {% if r.alerta_hueco_temporal %}<span class="badge bg-light text-muted border small">Red</span>{% endif %}
+                </div>
+
+                <div class="bg-light p-2 rounded border flex-grow-1" style="min-height: 100px;">
+                    <span class="text-muted d-block small mb-1 fw-bold">Protocolo:</span>
+                    <div class="text-dark" style="font-size: 0.82rem; line-height: 1.2;">
+                        {% if r.alerta_sequedad_relativa %} ○ Revisar la zona monitorizada y contrastar con el equipo agrario<br>{% endif %}
+                        {% if r.alerta_bateria_baja %} ○ Comprobar la alimentación del nodo<br>{% endif %}
+                        {% if r.alerta_panel_bajo %} ○ Revisar orientación, sombreado, suciedad o conexion del panel<br>{% endif %}
+                        {% if r.alerta_subida_brusca %} ○ Revisar si es perdida rapida de humedad o error de lectura<br>{% endif %}
+                        {% if r.alerta_caida_brusca %} ○ Revisar si es perdida rapida de humedad o error de lectura<br>{% endif %}
+                        {% if r.alerta_hueco_temporal %} ○ Revisar conectividad, energía o sistema de registro<br>{% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12 w-100 text-center py-5">
+        <div class="card card-agro p-5">
+            <h4 class="mt-3 text-success fw-bold">Sistema en estado óptimo</h4>
+            <p class="text-muted">No se registran anomalías técnicas ni agronómicas en este periodo.</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if registros.has_other_pages %}
+<div class="card card-agro p-3 mt-4">
+    <div class="row align-items-center">
+        <div class="col-md-4 text-muted small text-center text-md-start mb-3 mb-md-0">
+            Mostrando página <strong>{{ registros.number }}</strong> de <strong>{{ registros.paginator.num_pages }}</strong>
+        </div>
+
+        <div class="col-md-4">
+            <nav aria-label="Navegación">
+                <ul class="pagination justify-content-center mb-0 gap-1">
+                    {% if registros.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link shadow-sm" href="?tipo={{ tipo_vista }}&page={{ registros.previous_page_number }}" style="color: var(--azul-oscuro);">Anterior</a>
+                        </li>
+                    {% endif %}
+
+                    {% for num in registros.paginator.page_range %}
+                        {% if registros.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link shadow-sm" style="background-color: var(--azul-oscuro); border-color: var(--azul-oscuro);">{{ num }}</span>
+                            </li>
+                        {% elif num > registros.number|add:'-3' and num < registros.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link shadow-sm" href="?tipo={{ tipo_vista }}&page={{ num }}" style="color: var(--azul-oscuro);">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if registros.has_next %}
+                        <li class="page-item">
+                            <a class="page-link shadow-sm" href="?tipo={{ tipo_vista }}&page={{ registros.next_page_number }}" style="color: var(--azul-oscuro);">Siguiente</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+
+        <div class="col-md-4 text-end">
+            <div class="input-group shadow-sm" style="max-width: 200px; margin-left: auto;">
+                <span class="input-group-text bg-light small text-secondary fw-bold">Ir a:</span>
+                <input type="number" id="inputSaltoPagina" class="form-control text-center" min="1" max="{{ registros.paginator.num_pages }}" placeholder="#">
+                <button class="btn btn-agro-principal" type="button" onclick="saltarAPagina()">
+                    <i class="bi bi-arrow-right-short"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function saltarAPagina() {
+        const pagina = document.getElementById('inputSaltoPagina').value;
+        const totalPaginas = {{ registros.paginator.num_pages }};
+        if (pagina && pagina >= 1 && pagina <= totalPaginas) {
+            window.location.href = `?tipo={{ tipo_vista }}&page=${pagina}`;
+        }
+    }
+</script>
+{% endblock %}

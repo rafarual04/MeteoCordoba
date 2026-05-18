@@ -1,0 +1,190 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - MeteoCordoba{% endblock %}
+
+{% block content %}
+<div class="card card-agro p-4 mb-4">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h2 class="mb-0 fw-bold" style="color: var(--azul-oscuro);">Panel analítico</h2>
+        </div>
+        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+            <label class="fw-bold me-2 text-secondary">Escala:</label>
+            <select class="form-select d-inline-block w-auto shadow-sm" id="selectorEscala" onchange="actualizarTodo(this.value)">
+                <option value="diario" selected>Resumen por días</option>
+                <option value="horario">Detalle por horas</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-3">
+    <div class="col-md-3 mb-3">
+        <div class="card card-agro p-3 text-center">
+            <small class="text-muted text-uppercase fw-bold">Humedad Media</small>
+            <h3 class="fw-bold my-2" style="color: var(--azul-central);"><span id="m-hum">{{ d.hum|floatformat:1 }}</span>%</h3>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card card-agro p-3 text-center">
+            <small class="text-muted text-uppercase fw-bold">Temp. Media</small>
+            <h3 class="fw-bold my-2 text-danger"><span id="m-temp">{{ d.temp|floatformat:1 }}</span>°C</h3>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card card-agro p-3 text-center">
+            <small class="text-muted text-uppercase fw-bold">Batería Media</small>
+            <h3 class="fw-bold my-2" style="color: var(--azul-oscuro);"><span id="m-bat">{{ d.bat|floatformat:2 }}</span> V</h3>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card card-agro p-3 text-center" style="background-color: var(--azul-claro);">
+            <small class="text-muted text-uppercase fw-bold">Última humedad prevista</small>
+            <h3 class="fw-bold my-2" style="color: var(--azul-oscuro);"><span id="m-predic">{{ d.predic }}</span>%</h3>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="card card-agro p-3 text-center">
+            <small class="text-muted text-uppercase fw-bold">Alertas Sequedad</small>
+            <h3 class="fw-bold my-2 text-danger"><i class="bi bi-droplet-half me-2"></i><span id="a-seq">{{ d.seq|default:0 }}</span></h3>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card card-agro p-3 text-center">
+            <small class="text-muted text-uppercase fw-bold">Alertas Energéticas</small>
+            <h3 class="fw-bold my-2 text-warning"><i class="bi bi-lightning-charge me-2"></i><span id="a-ene">{{ d.ene|default:0 }}</span></h3>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card card-agro p-3 text-center">
+            <small class="text-muted text-uppercase fw-bold">Alertas Temp. Incoherente</small>
+            <h3 class="fw-bold my-2 text-info"><i class="bi bi-thermometer-high me-2"></i><span id="a-tem">{{ d.tem|default:0 }}</span></h3>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12 mb-3">
+        <div class="card card-agro p-3 text-center shadow-sm">
+            <small class="text-muted text-uppercase fw-bold" id="lbl-total-registros">Registros Diarios Totales</small>
+            <h3 class="fw-bold my-2" id="val-total-registros-wrapper">
+                <i id="ico-total-registros" class="bi bi-calendar3-event me-2"></i>
+                <span id="num-total-registros">0</span>
+            </h3>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card card-agro p-4">
+            <h5 class="fw-bold mb-3">Variables agronómicas</h5>
+            <div style="position: relative; height:320px;"><canvas id="chartAgro"></canvas></div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card card-agro p-4">
+            <h5 class="fw-bold mb-3">Rendimiento energético</h5>
+            <div style="position: relative; height:320px;"><canvas id="chartEner"></canvas></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Inyección de datos desde Django
+    const labelsD = [{% for r in historico_diario %}"{{ r.fecha|date:'d/m' }}",{% endfor %}];
+    const labelsH = [{% for r in historico_horario %}"{{ r.fecha|date:'H:i' }}",{% endfor %}];
+
+    // Almacenamos el conteo (.count) directamente en los metadatos de las tarjetas de JS
+    const dataD = {
+        totalCount: "{{ historico_diario.count|default:0 }}",
+        hum: [{% for r in historico_diario %}{{ r.humedad_media_global }},{% endfor %}],
+        temp: [{% for r in historico_diario %}{{ r.temperatura_promedio_global }},{% endfor %}],
+        bat: [{% for r in historico_diario %}{{ r.bateria_v }},{% endfor %}],
+        pan: [{% for r in historico_diario %}{{ r.panel_solar_v }},{% endfor %}],
+        cards: { hum: "{{ d.hum|floatformat:1 }}", temp: "{{ d.temp|floatformat:1 }}", bat: "{{ d.bat|floatformat:2 }}", pred: "{{ d.predic }}", seq: "{{ d.seq|default:0 }}", ene: "{{ d.ene|default:0 }}", tem: "{{ d.tem|default:0 }}" }
+    };
+
+    const dataH = {
+        totalCount: "{{ historico_horario.count|default:0 }}",
+        hum: [{% for r in historico_horario %}{{ r.humedad_media_global }},{% endfor %}],
+        temp: [{% for r in historico_horario %}{{ r.temperatura_promedio_global }},{% endfor %}],
+        bat: [{% for r in historico_horario %}{{ r.bateria_v }},{% endfor %}],
+        pan: [{% for r in historico_horario %}{{ r.panel_solar_v }},{% endfor %}],
+        cards: { hum: "{{ h.hum|floatformat:1 }}", temp: "{{ h.temp|floatformat:1 }}", bat: "{{ h.bat|floatformat:2 }}", pred: "{{ h.predic }}", seq: "{{ h.seq|default:0 }}", ene: "{{ h.ene|default:0 }}", tem: "{{ h.tem|default:0 }}" }
+    };
+
+    let cAgro, cEner;
+
+    function actualizarTodo(escala) {
+        const set = (escala === 'diario') ? dataD : dataH;
+        const labels = (escala === 'diario') ? labelsD : labelsH;
+
+        // 1. Actualizar TODAS las tarjetas superiores
+        document.getElementById('m-hum').innerText = set.cards.hum;
+        document.getElementById('m-temp').innerText = set.cards.temp;
+        document.getElementById('m-bat').innerText = set.cards.bat;
+        document.getElementById('m-predic').innerText = set.cards.pred;
+        document.getElementById('a-seq').innerText = set.cards.seq;
+        document.getElementById('a-ene').innerText = set.cards.ene;
+        document.getElementById('a-tem').innerText = set.cards.tem;
+
+        // 🔥 2. ACTUALIZACIÓN DINÁMICA DE LA NUEVA CARD DE CONTEO
+        const lblTotal = document.getElementById('lbl-total-registros');
+        const numTotal = document.getElementById('num-total-registros');
+        const icoTotal = document.getElementById('ico-total-registros');
+        const wrapperTotal = document.getElementById('val-total-registros-wrapper');
+
+        numTotal.innerText = set.totalCount;
+
+        if (escala === 'diario') {
+            lblTotal.innerText = "Registros Diarios Totales";
+            wrapperTotal.className = "fw-bold my-2 text-success";
+            icoTotal.className = "bi bi-calendar3-event me-2";
+        } else {
+            lblTotal.innerText = "Registros Horarios Totales";
+            wrapperTotal.className = "fw-bold my-2 text-primary";
+            icoTotal.className = "bi bi-clock-history me-2";
+        }
+
+        // 3. Actualizar Gráficos
+        if (cAgro) cAgro.destroy();
+        if (cEner) cEner.destroy();
+
+        const commonOptions = { responsive: true, maintainAspectRatio: false };
+
+        cAgro = new Chart(document.getElementById('chartAgro'), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: 'Humedad %', data: set.hum, borderColor: '#1E6B93', tension: 0.2, fill: true, backgroundColor: 'rgba(30,107,147,0.1)' },
+                    { label: 'Temperatura °C', data: set.temp, borderColor: '#dc3545', tension: 0.2 }
+                ]
+            },
+            options: commonOptions
+        });
+
+        cEner = new Chart(document.getElementById('chartEner'), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: 'Batería (V)', data: set.bat, borderColor: '#0F3A5F' },
+                    { label: 'Panel (V)', data: set.pan, borderColor: '#ffc107' }
+                ]
+            },
+            options: commonOptions
+        });
+    }
+
+    window.onload = () => actualizarTodo('diario');
+</script>
+{% endblock %}

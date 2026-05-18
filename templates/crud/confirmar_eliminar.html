@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Eliminar Registro {{ escala|capfirst }} - MeteoCordoba{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        
+        <div class="card card-agro text-center">
+            <div class="card-body p-4">
+                <div class="text-danger mb-4">
+                    <i class="bi bi-exclamation-triangle-fill" style="font-size: 3.5rem;"></i>
+                </div>
+                
+                <h3 class="fw-bold mb-3" style="color: var(--azul-oscuro);">¿Confirmas la eliminación?</h3>
+                
+                <p class="text-muted mb-4">
+                    Estás a punto de borrar de forma permanente el registro del día/hora 
+                    <strong class="text-dark">{{ registro.fecha }}</strong> correspondiente a la escala 
+                    <span class="badge bg-danger-soft text-danger text-uppercase small">{{ escala }}</span>. 
+                    Esta acción no se puede deshacer.
+                </p>
+                
+                <div class="alert border bg-white mb-4 p-2 small">
+                    <div class="d-flex flex-wrap justify-content-center gap-3 text-secondary">
+                        <div><strong>Humedad:</strong> {{ registro.humedad_media_global }}%</div>
+                        <div><strong>Temperatura:</strong> {{ registro.temperatura_promedio_global }}°C</div>
+                        <div><strong>Batería:</strong> {{ registro.bateria_v }}V</div>
+                        <div><strong>Panel solar:</strong> {{ registro.panel_solar_v }}V</div>
+                    </div>
+                </div>
+
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-center gap-2">
+                        <a href="{% url 'vista_datos' %}?tipo={{ escala }}" class="btn btn-agro-secundario px-4">
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-danger px-4 fw-bold">
+                            <i class="bi bi-trash-fill me-1"></i> Eliminar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

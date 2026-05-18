@@ -1,0 +1,190 @@
+{% extends 'base.html' %}
+
+{% block title %}Histórico - MeteoCordoba{% endblock %}
+
+{% block content %}
+<div class="card card-agro p-4 mb-4">
+    <div class="row align-items-center">
+        <div class="col-md-7">
+            <h2 class="mb-0 fw-bold" style="color: var(--azul-oscuro);">Histórico de datos</h2>
+            <p class="text-muted mb-0">Registros del sistema y predicciones IA</p>
+        </div>
+        
+        <div class="col-md-5 text-md-end mt-3 mt-md-0">
+            <label class="fw-bold me-2 text-secondary">Visualizar:</label>
+            <select class="form-select d-inline-block w-auto shadow-sm" id="selectorEscala" onchange="cambiarEscalaTabla(this.value)">
+                <option value="diario" {% if tipo_vista == 'diario' %}selected{% endif %}>Resumen por días</option>
+                <option value="horario" {% if tipo_vista == 'horario' %}selected{% endif %}>Detalle por horas</option>
+            </select>
+
+            {% if request.user.is_staff %}
+                <a href="{% url 'crear_registro' tipo_vista %}" class="btn btn-agro-principal align-middle shadow-sm me-2 fw-bold">
+                    <i class="bi bi-plus-circle me-1"></i> Añadir registro
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="card card-agro p-3 mb-4">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle table-agro text-center mb-0">
+            <thead>
+                <tr>
+                    <th data-bs-toggle="tooltip" title="Momento exacto de la lectura o promedio del día.">Fecha / Hora</th>
+                    <th data-bs-toggle="tooltip" title="Contenido de agua en el suelo (100%: Saturado / 0%: Seco).">Humedad</th>
+                    <th data-bs-toggle="tooltip" title="Grados centígrados medidos en el entorno del cultivo.">Temperatura</th>
+                    <th data-bs-toggle="tooltip" title="Nivel de carga del nodo (Voltios). Crítico por debajo de 3.3V.">Batería</th>
+                    <th data-bs-toggle="tooltip" title="Energía captada por la placa solar en voltios.">Panel</th>
+                    <th data-bs-toggle="tooltip" title="Notificaciones de riesgo agronómico o fallos técnicos.">Alertas</th>
+                    <th data-bs-toggle="tooltip" title="Estimación del valor de humedad para el siguiente intervalo (t+1).">Humedad prevista</th>
+                    {% if request.user.is_staff %}
+                        <th>Acciones</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in registros %}
+                <tr>
+                    <td class="fw-bold text-secondary">
+                        {{ r.fecha|date:"d/m/Y" }} 
+                        {% if tipo_vista == 'horario' %}
+                            <span class="small d-block text-muted">{{ r.fecha|date:"H:i" }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ r.humedad_media_global }}%</td>
+                    <td>{{ r.temperatura_promedio_global }}°C</td>
+                    <td>{{ r.bateria_v }}V</td>
+                    <td>{{ r.panel_solar_v }}V</td>
+                    <td>
+                        <div class="d-flex flex-wrap justify-content-center gap-1">
+                            {% if r.alerta_sequedad_relativa %}
+                                <span class="badge bg-danger">Sequedad</span>
+                            {% endif %}
+                            {% if r.alerta_bateria_baja %}
+                                <span class="badge bg-warning text-dark">Bat. baja</span>
+                            {% endif %}
+                            {% if r.alerta_panel_bajo %}
+                                <span class="badge bg-dark">Panel bajo</span>
+                            {% endif %}
+                            
+                            {% if not r.alerta_sequedad_relativa and not r.alerta_bateria_baja and not r.alerta_panel_bajo %}
+                                <span class="badge bg-success opacity-75">Normal</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="py-1">
+                            <span class="fw-bold d-block" style="color: var(--azul-oscuro);">{{ r.predic_humedad_futura }}%</span>
+                            <small class="text-muted">
+                                {% if tipo_vista == 'horario' %}Próxima hora{% else %}Dia siguiente{% endif %}
+                            </small>
+                        </div>
+                    </td>
+                    {% if request.user.is_staff %}
+                        <td>
+                            <div class="d-flex justify-content-center gap-1">
+                                <a href="{% url 'editar_registro' tipo_vista r.pk %}" class="btn btn-sm btn-outline-primary" title="Editar registro">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                                <a href="{% url 'eliminar_registro' tipo_vista r.pk %}" class="btn btn-sm btn-outline-danger" title="Eliminar registro">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    {% endif %}
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="{% if request.user.is_staff %}8{% else %}7{% endif %}" class="text-muted p-5">
+                        No se han encontrado registros en esta escala.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if registros.has_other_pages %}
+    <div class="mt-4 pt-3 border-top">
+        <div class="row align-items-center">
+            <div class="col-md-4 text-muted small text-center text-md-start mb-3 mb-md-0">
+                Mostrando página <strong>{{ registros.number }}</strong> de <strong>{{ registros.paginator.num_pages }}</strong>
+            </div>
+
+            <div class="col-md-5">
+                <nav aria-label="Navegación">
+                    <ul class="pagination justify-content-center mb-0 gap-1">
+                        {% if registros.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?tipo={{ tipo_vista }}&page={{ registros.previous_page_number }}" style="color: var(--azul-oscuro);">Anterior</a>
+                            </li>
+                        {% endif %}
+
+                        {% for num in registros.paginator.page_range %}
+                            {% if registros.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link" style="background-color: var(--azul-oscuro); border-color: var(--azul-oscuro);">{{ num }}</span>
+                                </li>
+                            {% elif num > registros.number|add:'-3' and num < registros.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?tipo={{ tipo_vista }}&page={{ num }}" style="color: var(--azul-oscuro);">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if registros.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?tipo={{ tipo_vista }}&page={{ registros.next_page_number }}" style="color: var(--azul-oscuro);">Siguiente</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+
+            <div class="col-md-3 text-end">
+                <div class="input-group shadow-sm" style="max-width: 175px; margin-left: auto;">
+                    <span class="input-group-text bg-light small text-secondary fw-bold">Ir a:</span>
+                    <input type="number" id="inputSaltoPagina" class="form-control text-center" min="1" max="{{ registros.paginator.num_pages }}" placeholder="#">
+                    <button class="btn btn-agro-ir" type="button" onclick="saltarAPagina()" title="Saltar a página">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+    function cambiarEscalaTabla(valor) {
+        window.location.href = "?tipo=" + valor;
+    }
+
+    function saltarAPagina() {
+        const pagina = document.getElementById('inputSaltoPagina').value;
+        const totalPaginas = {{ registros.paginator.num_pages }};
+        const tipoActual = "{{ tipo_vista }}";
+
+        if (pagina && pagina >= 1 && pagina <= totalPaginas) {
+            window.location.href = `?tipo=${tipoActual}&page=${pagina}`;
+        } else {
+            alert(`Por favor, introduce una página entre 1 y ${totalPaginas}`);
+        }
+    }
+
+    document.getElementById('inputSaltoPagina')?.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            saltarAPagina();
+        }
+    });
+
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+</script>
+{% endblock %}
