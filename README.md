@@ -31,7 +31,7 @@ A lo largo de la práctica se aíslan y tratan de forma estadística las siguien
 ---
 
 ## URL del hosteo
-rafarual04.pythonanywhere.com
+https://rafarual04.pythonanywhere.com/
 
 ---
 
